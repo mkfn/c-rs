@@ -1,5 +1,3 @@
-#![allow(unused)]
-
 use crate::CError;
 use anyhow::{Context, Result};
 
@@ -91,6 +89,10 @@ impl Group {
 
     fn push(&mut self, token: Token, span: Span) {
         self.tokens.push((token, span));
+    }
+
+    pub fn slice(&self) -> &[(Token, Span)] {
+        &self.tokens
     }
 }
 
@@ -187,6 +189,10 @@ impl TokenStream {
             bs_vec.push(String::from_utf8(end_bs.to_vec()).unwrap());
             bs_vec.join("\n")
         }
+    }
+
+    pub fn slice(&self) -> &[(Token, Span)] {
+        &self.tokens
     }
 }
 

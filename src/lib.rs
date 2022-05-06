@@ -1,7 +1,9 @@
 mod lexer;
+mod parser;
 
 pub use lexer::{Span, Token, TokenStream};
 use thiserror::Error;
+use anyhow::Result;
 
 #[derive(Error, Debug)]
 pub enum CError {
@@ -11,4 +13,10 @@ pub enum CError {
     ParseError,
     #[error("runtime error")]
     RuntimeError,
+}
+
+pub fn interpret(code: &str) -> Result<()> {
+    let tokens = lexer::lex(code)?;
+    let _ = parser::parse(&tokens)?;
+    todo!();
 }
