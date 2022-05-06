@@ -1,14 +1,14 @@
 use crate::CError;
 use anyhow::{Context, Result};
 
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, PartialOrd)]
 pub struct SpanPos {
     line: usize,
     column: usize,
 }
 
 impl SpanPos {
-    fn new() -> Self {
+    pub fn new() -> Self {
         Self { line: 0, column: 0 }
     }
 
@@ -41,10 +41,19 @@ impl std::fmt::Display for SpanPos {
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, PartialOrd)]
 pub struct Span {
     start: SpanPos, // line, column
     end: SpanPos,   // line, column
+}
+
+impl Span {
+    pub fn new() -> Self {
+        Self {
+            start: SpanPos::new(),
+            end: SpanPos::new(),
+        }
+    }
 }
 
 impl std::fmt::Display for Span {

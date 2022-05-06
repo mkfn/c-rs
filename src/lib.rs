@@ -11,8 +11,8 @@ use anyhow::Result;
 pub enum CError {
     #[error("lex error")]
     LexError,
-    #[error("parse error")]
-    ParseError,
+    #[error("parse error {0}")]
+    ParseError(Span),
     #[error("runtime error")]
     RuntimeError,
 }

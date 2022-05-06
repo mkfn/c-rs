@@ -3,6 +3,7 @@
 use crate::lexer::Group;
 use crate::{Span, Token, TokenStream};
 
+#[derive(Clone, Copy)]
 pub struct Seq<'a> {
     idx: usize,
     data: &'a [(Token, Span)],
@@ -15,14 +16,12 @@ impl<'a> Seq<'a> {
             data: ts.slice(),
         }
     }
-
     pub fn from_group(g: &'a Group) -> Self {
         Seq {
             idx: 0,
             data: g.slice(),
         }
     }
-
     pub fn forward(&mut self) -> bool {
         if self.idx == self.data.len() {
             false
