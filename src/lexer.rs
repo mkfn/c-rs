@@ -88,6 +88,10 @@ impl Group {
             Delimiter::Bracket => c == ']',
         }
     }
+
+    fn push(&mut self, token: Token, span: Span) {
+        self.tokens.push((token, span));
+    }
 }
 
 #[derive(Debug, PartialEq)]
@@ -146,7 +150,44 @@ pub enum Token {
 }
 
 pub struct TokenStream {
+    codelines: Vec<String>,
     tokens: Vec<(Token, Span)>,
+}
+
+impl TokenStream {
+    fn new(code: &str) -> Self {
+        let lines: Vec<_> = code.split('\n').map(|l| remove_comments(l)).collect();
+        let mut codelines = Vec::new();
+        for line in lines {
+            codelines.push(line.to_string());
+        }
+        Self {
+            codelines,
+            tokens: Vec::new(),
+        }
+    }
+
+    fn push(&mut self, token: Token, span: Span) {
+        self.tokens.push((token, span));
+    }
+
+    pub fn display(&self, span: Span) -> String {
+        if span.start.line == span.end.line {
+            let bytes = self.codelines[span.start.line].as_bytes();
+            let bytes = &bytes[span.start.column..span.end.column];
+            String::from_utf8(bytes.to_vec()).unwrap()
+        } else {
+            let mut bs_vec = Vec::new();
+            let start_bs = &self.codelines[span.start.line].as_bytes()[span.start.column..];
+            bs_vec.push(String::from_utf8(start_bs.to_vec()).unwrap());
+            for i in span.start.line + 1..span.end.line {
+                bs_vec.push(self.codelines[i].to_string());
+            }
+            let end_bs = &self.codelines[span.end.line].as_bytes()[..span.end.column];
+            bs_vec.push(String::from_utf8(end_bs.to_vec()).unwrap());
+            bs_vec.join("\n")
+        }
+    }
 }
 
 #[derive(Copy, Clone, PartialEq)]
@@ -156,31 +197,44 @@ enum BufType {
     None,
 }
 
+/// remove comments: //
+fn remove_comments(line: &str) -> String {
+    let mut result = String::new();
+    let mut last_slash = false;
+    for c in line.chars() {
+        if c == '/' {
+            if last_slash {
+                result.pop();
+                break;
+            }
+            last_slash = true;
+        }
+        result.push(c);
+    }
+    result
+}
+
 /// converts code into a token stream
 pub fn lex(code: &str) -> Result<TokenStream> {
     // Group Stack
+    let mut stream = TokenStream::new(code);
     let mut groups: Vec<(Group, SpanPos)> = Vec::new();
     let mut cont_buf = String::new();
     let mut buf_reading = BufType::None;
-    let mut tokens = Vec::new();
     let mut cur_pos = SpanPos::new();
     let mut last_pos = SpanPos::new();
     let x = groups.last_mut();
     macro_rules! push_token {
         () => {
             if let Some(t) = try_parse_token(&cont_buf)? {
-                // token with span
-                let t_s = (
-                    t,
-                    Span {
-                        start: last_pos,
-                        end: cur_pos,
-                    },
-                );
+                let span = Span {
+                    start: last_pos,
+                    end: cur_pos,
+                };
                 if let Some((g, _)) = groups.last_mut() {
-                    g.tokens.push(t_s);
+                    g.push(t, span);
                 } else {
-                    tokens.push(t_s);
+                    stream.push(t, span);
                 }
             }
             cont_buf.clear();
@@ -205,13 +259,13 @@ pub fn lex(code: &str) -> Result<TokenStream> {
             if let Some((g, pos)) = groups.pop() {
                 if g.match_delimiter(c) {
                     cur_pos.forward();
-                    tokens.push((
+                    stream.push(
                         Token::Group(g),
                         Span {
                             start: pos,
                             end: cur_pos,
                         },
-                    ));
+                    );
                     continue;
                 } else {
                     // Not corrcet match
@@ -253,7 +307,7 @@ pub fn lex(code: &str) -> Result<TokenStream> {
         // Not all groups closed
         return Err(CError::LexError).with_context(|| format!("not all groups closed"))?;
     }
-    Ok(TokenStream { tokens })
+    Ok(stream)
 }
 
 fn try_parse_token(input: &str) -> Result<Option<Token>> {
@@ -390,6 +444,7 @@ mod tests {
                     },
                 }
             );
+            assert_eq!("int", ts.display(*s));
         }
         // snip compare all
 
@@ -419,6 +474,12 @@ mod tests {
             assert_eq!(12, s.start.column);
             assert_eq!(5, s.end.line);
             assert_eq!(13, s.end.column);
+            assert_eq!(
+                "{
+                b += a;
+            }",
+                ts.display(*s)
+            );
         } else {
             panic!("last token is not group");
         }
