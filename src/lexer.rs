@@ -229,7 +229,6 @@ pub fn lex(code: &str) -> Result<TokenStream> {
     let mut buf_reading = BufType::None;
     let mut cur_pos = SpanPos::new();
     let mut last_pos = SpanPos::new();
-    let x = groups.last_mut();
     macro_rules! push_token {
         () => {
             if let Some(t) = try_parse_token(&cont_buf)? {
@@ -244,6 +243,7 @@ pub fn lex(code: &str) -> Result<TokenStream> {
                 }
             }
             cont_buf.clear();
+            #[allow(unused_assignments)]
             buf_reading = BufType::None;
         };
     }
@@ -359,7 +359,6 @@ fn try_parse_punct(input: &str) -> Option<Punct> {
         ">=" => Some(Punct::Ge),
         "&&" => Some(Punct::And),
         "||" => Some(Punct::Or),
-        "=" => Some(Punct::Assign),
         "+=" => Some(Punct::PlusAssign),
         "-=" => Some(Punct::MinusAssign),
         "*=" => Some(Punct::StarAssign),
@@ -423,7 +422,7 @@ mod tests {
     #[test]
     fn basic() {
         let code = "
-            int a = 1 + 1;
+            int a = 01 + 0x1;
             int b=2+2;
             b += a;
         ";
@@ -464,7 +463,7 @@ mod tests {
     #[test]
     fn group() {
         let code = "
-            int a = 1 + 1;
+            int a = 1 + 0b1;
             int b=2+2;
             {
                 b += a;
